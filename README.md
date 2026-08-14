@@ -4,16 +4,16 @@ This repository is kept as the public release and signing shell for Codux Mobile
 
 The mobile source code now lives in the Codux monorepo:
 
-- Source: `https://github.com/duxweb/codux/tree/main/apps/mobile`
-- Public mobile releases: `https://github.com/duxweb/codux-flutter/releases`
+- Source: `https://github.com/liujin0506/codux/tree/main/apps/mobile`
+- Public mobile releases: `https://github.com/liujin0506/codux-flutter/releases`
 
 ## Release Model
 
-The workflows in this repository do not build the checked-in source from this repository. They checkout `duxweb/codux` and build `apps/mobile` from the monorepo.
+The workflows in this repository do not build the checked-in source from this repository. They checkout `liujin0506/codux` and build `apps/mobile` from the monorepo.
 
 For a mobile release:
 
-1. Commit the mobile source changes in `duxweb/codux`.
+1. Commit the mobile source changes in `liujin0506/codux`.
 2. Tag and push the monorepo:
 
 ```bash
@@ -31,13 +31,13 @@ git tag v1.8.1
 git push origin v1.8.1
 ```
 
-The tag in this repository is only the release trigger. A tag push builds the matching `duxweb/codux` tag. For a mobile-only rebuild or hotfix, use `workflow_dispatch` and set `source_ref` to the monorepo branch, tag, or commit SHA; do not move the monorepo release tag just to rerun mobile packaging.
+The tag in this repository is only the release trigger. A tag push builds the matching `liujin0506/codux` tag. For a mobile-only rebuild or hotfix, use `workflow_dispatch` and set `source_ref` to the monorepo branch, tag, or commit SHA; do not move the monorepo release tag just to rerun mobile packaging.
 
 ## Workflows
 
-- `.github/workflows/release-build.yml`: builds the signed Android APK from `duxweb/codux/apps/mobile` and publishes it to this repository's GitHub Release. Manual runs can set `source_ref`.
-- `.github/workflows/ios-testflight.yml`: builds the iOS IPA from `duxweb/codux/apps/mobile` and uploads it to TestFlight. Manual runs can set `source_ref`.
-- `.github/workflows/test-build.yml`: manual Android test builds from `duxweb/codux/apps/mobile`. Use `source_ref` to choose the monorepo branch, tag, or commit SHA.
+- `.github/workflows/release-build.yml`: builds the signed Android APK from `liujin0506/codux/apps/mobile` and publishes it to this repository's GitHub Release. Manual runs can set `source_ref`.
+- `.github/workflows/ios-testflight.yml`: builds the iOS IPA from `liujin0506/codux/apps/mobile` and uploads it to TestFlight. Manual runs can set `source_ref`.
+- `.github/workflows/test-build.yml`: manual Android test builds from `liujin0506/codux/apps/mobile`. Use `source_ref` to choose the monorepo branch, tag, or commit SHA.
 
 ## Secrets
 
@@ -59,7 +59,7 @@ iOS / TestFlight release uses the existing repository secrets:
 
 ## Changelog
 
-`CHANGELOG.md` and `CHANGELOG.zh-CN.md` are kept here for the mobile release page. The workflow extracts release notes from the matching files under `duxweb/codux/apps/mobile`.
+`CHANGELOG.md` and `CHANGELOG.zh-CN.md` are kept here for the mobile release page. The workflow extracts release notes from the matching files under `liujin0506/codux/apps/mobile`.
 
 ## License
 
