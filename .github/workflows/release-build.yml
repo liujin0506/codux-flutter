@@ -16,7 +16,7 @@ on:
         description: "Version to build, for example 1.0.0"
         required: true
       source_ref:
-        description: "duxweb/codux ref to build, for example main, v1.8.1, or a commit SHA"
+        description: "liujin0506/codux ref to build, for example main, v1.8.1, or a commit SHA"
         required: false
         default: main
       publish_release:
@@ -50,8 +50,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          repository: duxweb/codux
+          repository: liujin0506/codux
           ref: ${{ github.event_name == 'push' && github.ref_name || github.event.inputs.source_ref || 'main' }}
+          token: ${{ secrets.CODUX_SOURCE_TOKEN }}
 
       - name: Set release working directory
         shell: bash

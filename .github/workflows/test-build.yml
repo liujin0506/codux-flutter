@@ -13,7 +13,7 @@ on:
         description: "Build number override"
         required: false
       source_ref:
-        description: "duxweb/codux ref to build, for example main, v1.8.1, or a commit SHA"
+        description: "liujin0506/codux ref to build, for example main, v1.8.1, or a commit SHA"
         required: false
         default: main
       configuration:
@@ -50,8 +50,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          repository: duxweb/codux
+          repository: liujin0506/codux
           ref: ${{ github.event.inputs.source_ref || 'main' }}
+          token: ${{ secrets.CODUX_SOURCE_TOKEN }}
 
       - name: Set build working directory
         shell: bash
