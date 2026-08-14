@@ -190,7 +190,12 @@ jobs:
             exit "$sdkmanager_status"
           fi
           android_sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT}}"
-          echo "ANDROID_NDK_HOME=${android_sdk_root}/ndk/${ANDROID_NDK_VERSION}" >> "$GITHUB_ENV"
+          ndk_path="${android_sdk_root}/ndk/${ANDROID_NDK_VERSION}"
+          echo "ANDROID_NDK_HOME=${ndk_path}" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=${ndk_path}" >> "$GITHUB_ENV"
+          if [[ -d "${android_sdk_root}/ndk" ]]; then
+            find "${android_sdk_root}/ndk" -mindepth 1 -maxdepth 1 -type d ! -name "${ANDROID_NDK_VERSION}" -exec rm -rf {} +
+          fi
 
       - name: Install cargo-ndk
         run: cargo install cargo-ndk --locked
@@ -204,10 +209,22 @@ jobs:
           rm -rf "$ZIG_GLOBAL_CACHE_DIR" "$ZIG_LOCAL_CACHE_DIR"
           mkdir -p "$ZIG_GLOBAL_CACHE_DIR" "$ZIG_LOCAL_CACHE_DIR"
           bash "$MOBILE_DIR/plugin/codux_protocol_ffi/scripts/build-android.sh"
+          echo "CODUX_SKIP_ANDROID_FFI_BUILD=1" >> "$GITHUB_ENV"
+
+      - name: Free disk space
+        shell: bash
+        run: |
+          df -h /
+          rm -rf target/debug target/release
+          rm -rf "${{ runner.temp }}/zig-global-cache-host" "${{ runner.temp }}/zig-local-cache-host"
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost || true
+          df -h /
 
       - name: Build release APK
         working-directory: apps/mobile
         shell: bash
+        env:
+          GRADLE_OPTS: -Dorg.gradle.vfs.watch=false -Dorg.gradle.daemon=false
         run: |
           rm -rf dist
           mkdir -p dist
