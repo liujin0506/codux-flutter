@@ -16,7 +16,7 @@ on:
         description: "Version to build, for example 1.0.0"
         required: true
       source_ref:
-        description: "liujin0506/codux ref to build, for example main, v1.8.1, or a commit SHA"
+        description: "liujin0506/codux ref to build, for example main, v1.8.1, or a full 40-character commit SHA"
         required: false
         default: main
       publish_release:
@@ -48,7 +48,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: liujin0506/codux
           ref: ${{ github.event_name == 'push' && github.ref_name || github.event.inputs.source_ref || 'main' }}
