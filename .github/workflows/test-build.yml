@@ -24,6 +24,11 @@ on:
         options:
           - Debug
           - Release
+      build_apk:
+        description: "Build the Android APK after the tests"
+        required: false
+        default: true
+        type: boolean
       log_level:
         description: "CODUX_LOG_LEVEL"
         required: false
@@ -115,6 +120,18 @@ jobs:
         with:
           targets: aarch64-linux-android
 
+      - name: Restore Rust cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: mobile-rust-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}-${{ github.run_id }}
+          restore-keys: |
+            mobile-rust-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}-
+            mobile-rust-${{ runner.os }}-
+
       - name: Set up Zig
         uses: mlugg/setup-zig@v2
         with:
@@ -136,6 +153,7 @@ jobs:
         run: flutter test
 
       - name: Install Android NDK
+        if: ${{ inputs.build_apk }}
         shell: bash
         env:
           ANDROID_NDK_VERSION: "27.0.12077973"
@@ -171,9 +189,13 @@ jobs:
           fi
 
       - name: Install cargo-ndk
-        run: cargo install cargo-ndk --locked
+        if: ${{ inputs.build_apk }}
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-ndk
 
       - name: Build Rust FFI for Android
+        if: ${{ inputs.build_apk }}
         shell: bash
         env:
           ZIG_GLOBAL_CACHE_DIR: ${{ runner.temp }}/zig-global-cache-android
@@ -184,7 +206,32 @@ jobs:
           bash "$MOBILE_DIR/plugin/codux_protocol_ffi/scripts/build-android.sh"
           echo "CODUX_SKIP_ANDROID_FFI_BUILD=1" >> "$GITHUB_ENV"
 
+      # Saved before Free disk space, which deletes the target directories the
+      # next run wants to restore.
+      - name: Save Rust cache
+        if: always()
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: mobile-rust-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}-${{ github.run_id }}
+
+      - name: Restore Gradle cache
+        if: ${{ inputs.build_apk }}
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: mobile-gradle-${{ runner.os }}-${{ hashFiles('apps/mobile/android/**/*.gradle*', 'apps/mobile/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            mobile-gradle-${{ runner.os }}-
+
       - name: Free disk space
+        if: ${{ inputs.build_apk }}
         shell: bash
         run: |
           df -h /
@@ -193,6 +240,7 @@ jobs:
           df -h /
 
       - name: Build APK
+        if: ${{ inputs.build_apk }}
         working-directory: apps/mobile
         shell: bash
         env:
@@ -215,6 +263,7 @@ jobs:
           (cd dist && sha256sum *.apk > SHA256SUMS.txt)
 
       - name: Upload workflow artifact
+        if: ${{ inputs.build_apk }}
         uses: actions/upload-artifact@v4
         with:
           name: codux-mobile-${{ steps.meta.outputs.package_version }}-manual
