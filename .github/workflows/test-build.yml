@@ -110,10 +110,6 @@ jobs:
         working-directory: apps/mobile
         run: flutter analyze
 
-      - name: Test
-        working-directory: apps/mobile
-        run: flutter test
-
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -123,6 +119,21 @@ jobs:
         uses: mlugg/setup-zig@v2
         with:
           version: 0.15.2
+
+      - name: Build Rust FFI for host tests
+        shell: bash
+        env:
+          ZIG_GLOBAL_CACHE_DIR: ${{ runner.temp }}/zig-global-cache-host
+          ZIG_LOCAL_CACHE_DIR: ${{ runner.temp }}/zig-local-cache-host
+        run: |
+          rm -rf "$ZIG_GLOBAL_CACHE_DIR" "$ZIG_LOCAL_CACHE_DIR"
+          mkdir -p "$ZIG_GLOBAL_CACHE_DIR" "$ZIG_LOCAL_CACHE_DIR"
+          cargo build -p codux-protocol-ffi --release
+          echo "LD_LIBRARY_PATH=$PWD/target/release:${LD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
+
+      - name: Test
+        working-directory: apps/mobile
+        run: flutter test
 
       - name: Install Android NDK
         shell: bash
