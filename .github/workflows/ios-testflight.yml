@@ -40,7 +40,44 @@ on:
           - off
 
 jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      signing_configured: ${{ steps.check.outputs.signing_configured }}
+
+    steps:
+      - name: Check iOS signing secrets
+        id: check
+        shell: bash
+        env:
+          IOS_DISTRIBUTION_CERT_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERT_BASE64 }}
+          IOS_DISTRIBUTION_CERT_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERT_PASSWORD }}
+          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          missing=()
+          [[ -n "${IOS_DISTRIBUTION_CERT_BASE64:-}" ]] || missing+=("IOS_DISTRIBUTION_CERT_BASE64")
+          [[ -n "${IOS_DISTRIBUTION_CERT_PASSWORD:-}" ]] || missing+=("IOS_DISTRIBUTION_CERT_PASSWORD")
+          [[ -n "${IOS_PROVISIONING_PROFILE_BASE64:-}" ]] || missing+=("IOS_PROVISIONING_PROFILE_BASE64")
+
+          if (( ${#missing[@]} > 0 )); then
+            {
+              printf '### iOS TestFlight skipped\n\n'
+              printf 'iOS signing secrets are not configured for this repository:\n\n'
+              printf -- '- `%s`\n' "${missing[@]}"
+              printf '\nAdd them under Settings -> Secrets and variables -> Actions to enable TestFlight builds.\n'
+            } >> "$GITHUB_STEP_SUMMARY"
+            printf 'Skipping iOS TestFlight build; missing secrets: %s\n' "${missing[*]}"
+            echo "signing_configured=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "signing_configured=true" >> "$GITHUB_OUTPUT"
+
   build-and-upload:
+    needs: preflight
+    if: needs.preflight.outputs.signing_configured == 'true'
     runs-on: macos-26
     permissions:
       contents: read

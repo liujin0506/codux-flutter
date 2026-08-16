@@ -110,10 +110,6 @@ jobs:
         working-directory: apps/mobile
         run: flutter analyze
 
-      - name: Test
-        working-directory: apps/mobile
-        run: flutter test
-
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -124,17 +120,54 @@ jobs:
         with:
           version: 0.15.2
 
+      - name: Build Rust FFI for host tests
+        shell: bash
+        env:
+          ZIG_GLOBAL_CACHE_DIR: ${{ runner.temp }}/zig-global-cache-host
+          ZIG_LOCAL_CACHE_DIR: ${{ runner.temp }}/zig-local-cache-host
+        run: |
+          rm -rf "$ZIG_GLOBAL_CACHE_DIR" "$ZIG_LOCAL_CACHE_DIR"
+          mkdir -p "$ZIG_GLOBAL_CACHE_DIR" "$ZIG_LOCAL_CACHE_DIR"
+          cargo build -p codux-protocol-ffi --release
+          echo "LD_LIBRARY_PATH=$PWD/target/release:${LD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
+
+      - name: Test
+        working-directory: apps/mobile
+        run: flutter test
+
       - name: Install Android NDK
         shell: bash
         env:
           ANDROID_NDK_VERSION: "27.0.12077973"
         run: |
-          yes | sdkmanager "ndk;${ANDROID_NDK_VERSION}"
-          ndk_path="${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}"
+          sdkmanager_bin=""
+          for candidate in \
+            "${ANDROID_HOME:-}/cmdline-tools/latest/bin/sdkmanager" \
+            "${ANDROID_SDK_ROOT:-}/cmdline-tools/latest/bin/sdkmanager" \
+            "${ANDROID_HOME:-}/tools/bin/sdkmanager" \
+            "${ANDROID_SDK_ROOT:-}/tools/bin/sdkmanager"; do
+            if [[ -x "$candidate" ]]; then
+              sdkmanager_bin="$candidate"
+              break
+            fi
+          done
+          if [[ -z "$sdkmanager_bin" ]]; then
+            echo "sdkmanager was not found under ANDROID_HOME=${ANDROID_HOME:-} or ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-}" >&2
+            exit 1
+          fi
+          set +o pipefail
+          yes | "$sdkmanager_bin" "ndk;${ANDROID_NDK_VERSION}"
+          sdkmanager_status="${PIPESTATUS[1]}"
+          set -o pipefail
+          if [[ "$sdkmanager_status" -ne 0 ]]; then
+            exit "$sdkmanager_status"
+          fi
+          android_sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT}}"
+          ndk_path="${android_sdk_root}/ndk/${ANDROID_NDK_VERSION}"
           echo "ANDROID_NDK_HOME=${ndk_path}" >> "$GITHUB_ENV"
           echo "ANDROID_NDK_ROOT=${ndk_path}" >> "$GITHUB_ENV"
-          if [[ -d "${ANDROID_HOME}/ndk" ]]; then
-            find "${ANDROID_HOME}/ndk" -mindepth 1 -maxdepth 1 -type d ! -name "${ANDROID_NDK_VERSION}" -exec rm -rf {} +
+          if [[ -d "${android_sdk_root}/ndk" ]]; then
+            find "${android_sdk_root}/ndk" -mindepth 1 -maxdepth 1 -type d ! -name "${ANDROID_NDK_VERSION}" -exec rm -rf {} +
           fi
 
       - name: Install cargo-ndk
